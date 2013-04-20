@@ -1,0 +1,14 @@
+target/
+
+# Java #
+*.class
+*.jar
+*.war
+*.ear
+
+# IntelliJ #
+.idea/
+*.iml
+
+# OS X #
+.DS_Store
