@@ -4,6 +4,9 @@ import org.apache.log4j.Logger;
 
 import java.util.concurrent.*;
 
+/**
+ * The server's {@link ThreadPool}, pre-configured with some default constants.
+ */
 public class ServerThreadPool extends ThreadPoolExecutor implements ThreadPool {
     private static final Logger logger = Logger.getLogger(ServerThreadPool.class);
 
@@ -13,7 +16,7 @@ public class ServerThreadPool extends ThreadPoolExecutor implements ThreadPool {
     private static final int QUEUE_SIZE = 10;
 
     /**
-     * Created a ThreadPool with the default constant values of this class.
+     * Creates a {@link ThreadPool} with the default constant values of this class.
      */
     public ServerThreadPool() {
         super(CORE_POOL_SIZE, MAX_POOL_SIZE, KEEP_ALIVE_TIME, TimeUnit.SECONDS,
@@ -21,7 +24,7 @@ public class ServerThreadPool extends ThreadPoolExecutor implements ThreadPool {
     }
 
     /**
-     * Creates a new ThreadPool with the given initial parameters.
+     * Creates a new {@link ThreadPool} with the given initial parameters.
      *
      * @param corePoolSize    the number of threads to keep in the pool,
      *                        even if they are idle.
@@ -41,7 +44,7 @@ public class ServerThreadPool extends ThreadPoolExecutor implements ThreadPool {
     }
 
     /**
-     * @see com.akrivos.eos.ThreadPool#enqueueTask(Runnable)
+     * @see ThreadPool#enqueueTask(Runnable)
      */
     @Override
     public boolean enqueueTask(Runnable task) {

@@ -1,6 +1,5 @@
 package com.akrivos.eos;
 
-import com.akrivos.eos.constants.HttpStatusCode;
 import org.apache.log4j.Logger;
 
 import java.io.*;

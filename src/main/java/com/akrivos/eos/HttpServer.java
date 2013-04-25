@@ -3,7 +3,7 @@ package com.akrivos.eos;
 import java.net.Socket;
 
 /**
- * Main HTTP server class.
+ * An implementation of a {@link Server} for an HTTP Server.
  */
 public class HttpServer implements Server {
     public static final String HTTP_VERSION = "HTTP/1.1";
@@ -14,10 +14,16 @@ public class HttpServer implements Server {
     private Connector[] connectors;
     private Handler handler;
 
+    /**
+     * Creates a new HttpServer and its {@link ThreadPool}.
+     */
     public HttpServer() {
         threadPool = new ServerThreadPool();
     }
 
+    /**
+     * @see Server#start()
+     */
     @Override
     public void start() throws Exception {
         if (connectors != null) {
@@ -27,6 +33,9 @@ public class HttpServer implements Server {
         }
     }
 
+    /**
+     * @see Server#stop()
+     */
     @Override
     public void stop() throws Exception {
         if (connectors != null) {
@@ -36,32 +45,50 @@ public class HttpServer implements Server {
         }
     }
 
+    /**
+     * @see Server#getConnectors()
+     */
     @Override
     public Connector[] getConnectors() {
         return connectors;
     }
 
+    /**
+     * @see Server#setConnectors(Connector[])
+     */
     @Override
     public void setConnectors(Connector[] connectors) {
         this.connectors = connectors;
     }
 
+    /**
+     * @see Server#getHandler()
+     */
     @Override
     public Handler getHandler() {
         return handler;
     }
 
+    /**
+     * @see Server#setHandler(Handler)
+     */
     @Override
     public void setHandler(Handler handler) {
         this.handler = handler;
     }
 
+    /**
+     * @see Server#handle(Socket)
+     */
     @Override
     public void handle(Socket socket) throws Exception {
         if (handler != null)
             handler.handle(socket);
     }
 
+    /**
+     * @see ThreadPool#enqueueTask(Runnable)
+     */
     @Override
     public boolean enqueueTask(Runnable task) throws Exception {
         return threadPool.enqueueTask(task);

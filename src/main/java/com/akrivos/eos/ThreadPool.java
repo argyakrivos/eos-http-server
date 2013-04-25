@@ -1,11 +1,11 @@
 package com.akrivos.eos;
 
 /**
- * A simple Thread Pool interface.
+ * A simple ThreadPool interface.
  */
 public interface ThreadPool {
     /**
-     * Enqueues a task in the Thread Pool.
+     * Enqueues a task in the ThreadPool.
      *
      * @param task the task to be executed.
      * @return true if the task was executed successfully
