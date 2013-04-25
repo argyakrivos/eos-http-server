@@ -1,11 +1,13 @@
 package com.akrivos.eos.constants;
 
 public enum HttpStatusCode {
-    // - 1xx: Informational - Request received, continuing process
+    // - 1xx: Informational
+    // - Request received, continuing process
     CONTINUE(100, "Continue"),
     SWITCHING_PROTOCOLS(101, "Switching Protocols"),
 
-    // - 2xx: Success - The action was successfully received, understood, and accepted
+    // - 2xx: Success
+    // - The action was successfully received, understood, and accepted
     OK(200, "OK"),
     CREATED(201, "Created"),
     ACCEPTED(202, "Accepted"),
@@ -14,7 +16,8 @@ public enum HttpStatusCode {
     RESET(205, "Reset Content"),
     PARTIAL(206, "Partial Content"),
 
-    // - 3xx: Redirection - Further action must be taken in order to complete the request
+    // - 3xx: Redirection
+    // - Further action must be taken in order to complete the request
     MULT_CHOICE(300, "Multiple Choices"),
     MOVED_PERM(301, "Moved Permanently"),
     FOUND(302, "Found"),
@@ -23,7 +26,8 @@ public enum HttpStatusCode {
     USE_PROXY(305, "Use Proxy"),
     TEMP_REDIRECT(307, "Temporary Redirect"),
 
-    // - 4xx: Client Error - The request contains bad syntax or cannot be fulfilled
+    // - 4xx: Client Error
+    // - The request contains bad syntax or cannot be fulfilled
     BAD_REQUEST(400, "Bad Request"),
     UNAUTHORIZED(401, "Unauthorized"),
     PAYMENT_REQUIRED(402, "Payment Required"),
@@ -43,7 +47,8 @@ public enum HttpStatusCode {
     RANGE_NOT_SATISFIABLE(416, "Requested Range Not Satisfiable"),
     EXPECTATION_FAILED(417, "Expectation Failed"),
 
-    // - 5xx: Server Error - The server failed to fulfill an apparently valid request
+    // - 5xx: Server Error
+    // - The server failed to fulfill an apparently valid request
     INTERNAL_SERVER_ERROR(500, "Internal Server Error"),
     NOT_IMPLEMENTED(501, "Not Implemented"),
     BAD_GATEWAY(502, "Bad Gateway"),
@@ -65,5 +70,9 @@ public enum HttpStatusCode {
 
     public String getReasonPhrase() {
         return reasonPhrase;
+    }
+
+    public String getFullStatus() {
+        return String.format("%d %s", statusCode, reasonPhrase);
     }
 }
