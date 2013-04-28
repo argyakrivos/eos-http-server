@@ -1,4 +1,6 @@
-package com.akrivos.eos;
+package com.akrivos.eos.http;
+
+import com.akrivos.eos.*;
 
 import java.net.Socket;
 
@@ -82,8 +84,9 @@ public class HttpServer implements Server {
      */
     @Override
     public void handle(Socket socket) throws Exception {
-        if (handler != null)
+        if (handler != null) {
             handler.handle(socket);
+        }
     }
 
     /**

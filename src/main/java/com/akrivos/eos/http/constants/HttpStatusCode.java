@@ -1,5 +1,9 @@
-package com.akrivos.eos.constants;
+package com.akrivos.eos.http.constants;
 
+/**
+ * An enum with all HTTP status codes along with their reason-phrase.
+ * Taken from: https://github.com/bigcompany/know-your-http
+ */
 public enum HttpStatusCode {
     // - 1xx: Informational
     // - Request received, continuing process
@@ -64,14 +68,30 @@ public enum HttpStatusCode {
         this.reasonPhrase = reasonPhrase;
     }
 
+    /**
+     * Returns the status code of this HTTP status.
+     *
+     * @return the status code of this HTTP status.
+     */
     public int getStatusCode() {
         return statusCode;
     }
 
+    /**
+     * Returns the reason-phrase of this HTTP status.
+     *
+     * @return the reason-phrase of this HTTP status.
+     */
     public String getReasonPhrase() {
         return reasonPhrase;
     }
 
+    /**
+     * Returns the status code along with the reason-phrase
+     * of this HTTP status.
+     *
+     * @return the status code and the reason-phrase as a {@link String}.
+     */
     public String getFullStatus() {
         return String.format("%d %s", statusCode, reasonPhrase);
     }

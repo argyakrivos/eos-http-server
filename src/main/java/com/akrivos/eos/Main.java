@@ -1,6 +1,9 @@
 package com.akrivos.eos;
 
 import com.akrivos.eos.config.Settings;
+import com.akrivos.eos.http.FilesHandler;
+import com.akrivos.eos.http.HttpServer;
+import com.akrivos.eos.http.SocketConnector;
 import org.apache.log4j.Logger;
 
 /**

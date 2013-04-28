@@ -1,5 +1,7 @@
-package com.akrivos.eos;
+package com.akrivos.eos.http;
 
+import com.akrivos.eos.Connector;
+import com.akrivos.eos.Server;
 import org.apache.log4j.Logger;
 
 import java.net.InetSocketAddress;
@@ -9,9 +11,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * An implementation of a {@link Connector} that listens on a specified address
+ * An implementation of a {@link com.akrivos.eos.Connector} that listens on a specified address
  * and port, with a specific number of receivers, accepting connections and
- * enqueuing them to the server's {@link ThreadPool}
+ * enqueuing them to the server's {@link com.akrivos.eos.ThreadPool}
  */
 public class SocketConnector implements Connector {
     private static final Logger logger = Logger.getLogger(SocketConnector.class);
@@ -35,7 +37,7 @@ public class SocketConnector implements Connector {
 
     /**
      * Starts the {@link SocketConnector} by spawning the receivers, who wait until
-     * a connection is accepted, and finally adding it to the {@link ThreadPool}
+     * a connection is accepted, and finally adding it to the {@link com.akrivos.eos.ThreadPool}
      * to be handled by the server's handler.
      *
      * @throws Exception any exception that might occur.
@@ -180,12 +182,12 @@ public class SocketConnector implements Connector {
         public void run() {
             addConnection(this);
             try {
-                if (logger.isInfoEnabled()) {
-                    logger.info("Handling connection...");
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Handling connection...");
                 }
                 server.handle(socket);
-                if (logger.isInfoEnabled()) {
-                    logger.info("Finished handling connection");
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Finished handling connection");
                 }
             } catch (Exception e) {
                 logger.error("Error while handling the connection: "
@@ -194,7 +196,8 @@ public class SocketConnector implements Connector {
                 try {
                     close();
                 } catch (Exception e) {
-                    logger.error("Error while closing the connection");
+                    logger.error("Error while closing the connection: "
+                            + e.getMessage());
                 }
             }
         }
