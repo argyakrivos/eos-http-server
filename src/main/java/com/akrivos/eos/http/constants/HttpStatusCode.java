@@ -1,5 +1,9 @@
 package com.akrivos.eos.http.constants;
 
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * An enum with all HTTP status codes along with their reason-phrase.
  * Taken from: https://github.com/bigcompany/know-your-http
@@ -60,12 +64,45 @@ public enum HttpStatusCode {
     GATEWAY_TIMEOUT(504, "Gateway Timeout"),
     HTTP_VERSION(505, "HTTP Version Not Supported");
 
+    /**
+     * Keep a map containing all the enums with their {@link Integer} value.
+     * http://stackoverflow.com/questions/1167982/check-if-enum-exists-in-java
+     */
+    private static final Map<Integer, HttpStatusCode> intToValueMap =
+            new HashMap<Integer, HttpStatusCode>();
     private final int statusCode;
     private final String reasonPhrase;
 
+    /**
+     * Populates the map using EnumSet.allOf, which is much more efficient for
+     * enums without a large number of elements.
+     */
+    static {
+        for (HttpStatusCode value : EnumSet.allOf(HttpStatusCode.class)) {
+            intToValueMap.put(value.getStatusCode(), value);
+        }
+    }
+
+    /**
+     * Creates a new {@link HttpStatusCode} with the specified
+     * status code and reason-phrase.
+     *
+     * @param statusCode   the status code.
+     * @param reasonPhrase the reason-phrase.
+     */
     private HttpStatusCode(int statusCode, String reasonPhrase) {
         this.statusCode = statusCode;
         this.reasonPhrase = reasonPhrase;
+    }
+
+    /**
+     * Parses an {@link Integer} and tries to match the {@link HttpStatusCode}.
+     *
+     * @param code the status code of a {@link HttpStatusCode}.
+     * @return the {@link HttpStatusCode} if found, null otherwise.
+     */
+    public static HttpStatusCode forCode(int code) {
+        return intToValueMap.get(code);
     }
 
     /**
@@ -84,15 +121,5 @@ public enum HttpStatusCode {
      */
     public String getReasonPhrase() {
         return reasonPhrase;
-    }
-
-    /**
-     * Returns the status code along with the reason-phrase
-     * of this HTTP status.
-     *
-     * @return the status code and the reason-phrase as a {@link String}.
-     */
-    public String getFullStatus() {
-        return String.format("%d %s", statusCode, reasonPhrase);
     }
 }
