@@ -62,12 +62,14 @@ public class SocketConnector implements Connector {
                             // and increase performance.
                             socket.setTcpNoDelay(true);
 
-                            // keep-alive for 60 seconds.
-                            socket.setSoTimeout(60 * 1000);
+                            // keep-alive for 30 seconds.
+                            socket.setSoTimeout(30 * 1000);
 
                             // add to ThreadPool
-                            if (logger.isInfoEnabled()) {
-                                logger.info("Added connection to ThreadPool");
+                            if (logger.isDebugEnabled()) {
+                                logger.debug("Adding connection from "
+                                        + socket.getRemoteSocketAddress().toString()
+                                        + " to ThreadPool");
                             }
                             server.enqueueTask(new Connection(socket));
                         } while (!serverSocket.isClosed());
@@ -183,21 +185,23 @@ public class SocketConnector implements Connector {
             addConnection(this);
             try {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Handling connection...");
+                    logger.debug("Handling connection from "
+                            + socket.getRemoteSocketAddress().toString());
                 }
                 server.handle(socket);
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Finished handling connection");
+                    logger.debug("Finished handling connection from "
+                            + socket.getRemoteSocketAddress().toString());
                 }
             } catch (Exception e) {
-                logger.error("Error while handling the connection: "
-                        + e.getMessage());
+                logger.error("Error while handling the connection from "
+                        + socket.getRemoteSocketAddress().toString(), e);
             } finally {
                 try {
                     close();
                 } catch (Exception e) {
-                    logger.error("Error while closing the connection: "
-                            + e.getMessage());
+                    logger.error("Error while closing the connection from "
+                            + socket.getRemoteSocketAddress().toString(), e);
                 }
             }
         }
