@@ -22,6 +22,7 @@ public enum HttpResponseHeader {
     ContentMd5("Content-MD5"),
     ContentDisposition("Content-Disposition"),
     ContentType("Content-Type"),
+    Date("Date"),
     Etag("Etag"),
     Expires("Expires"),
     LastModified("Last-Modified"),
@@ -30,6 +31,7 @@ public enum HttpResponseHeader {
     P3P("P3P"),
     Pragma("Pragma"),
     ProxyAuthenticate("Proxy-Authenticate"),
+    Refresh("Refresh"),
     RetryAfter("Retry-After"),
     Server("Server"),
     SetCookie("Set-Cookie"),
@@ -40,8 +42,7 @@ public enum HttpResponseHeader {
     Vary("Vary"),
     Via("Via"),
     Warning("Warning"),
-    WWWAuthenticate("WWW-Authenticate"),
-    Refresh("Refresh");
+    WWWAuthenticate("WWW-Authenticate");
 
     /**
      * Keep a map containing all the enums with their {@link String} value.
@@ -57,7 +58,7 @@ public enum HttpResponseHeader {
      */
     static {
         for (HttpResponseHeader value : EnumSet.allOf(HttpResponseHeader.class)) {
-            nameToValueMap.put(value.name(), value);
+            nameToValueMap.put(value.getName(), value);
         }
     }
 

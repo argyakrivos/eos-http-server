@@ -33,6 +33,7 @@ public enum HttpRequestHeader {
     MaxForwards("Max-Forwards"),
     Origin("Origin"),
     Pragma("Pragma"),
+    ProxyAuthorization("Proxy-Authorization"),
     Range("Range"),
     Referer("Referer"),
     TE("TE"),
@@ -55,7 +56,7 @@ public enum HttpRequestHeader {
      */
     static {
         for (HttpRequestHeader value : EnumSet.allOf(HttpRequestHeader.class)) {
-            nameToValueMap.put(value.name(), value);
+            nameToValueMap.put(value.getName(), value);
         }
     }
 
