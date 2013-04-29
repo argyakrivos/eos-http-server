@@ -8,11 +8,12 @@ import java.io.*;
 import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class HttpRequest {
     public static final int MAX_URI_LENGTH = 4096;
 
-    private final InputStream inputStream;
     private final Map<HttpRequestHeader, String> headers;
     private final Map<String, String> parameters;
     private final BufferedReader reader;
@@ -21,7 +22,6 @@ public class HttpRequest {
     private float httpVersion;
 
     public HttpRequest(InputStream inputStream) throws HttpException {
-        this.inputStream = inputStream;
         headers = new HashMap<HttpRequestHeader, String>();
         parameters = new HashMap<String, String>();
         reader = new BufferedReader(new InputStreamReader(inputStream));
@@ -49,6 +49,12 @@ public class HttpRequest {
     }
 
     private void parseRequest() throws HttpException {
+        decodeRequestLine();
+        decodeHeaders();
+        decodeParameters();
+    }
+
+    private void decodeRequestLine() throws HttpException {
         // Request-Line = Method SP Request-URI SP HTTP-Version CRLF
         String requestLine;
         try {
@@ -91,8 +97,9 @@ public class HttpRequest {
         } else {
             httpVersion = 1f;
         }
+    }
 
-        // parsing headers
+    private void decodeHeaders() throws HttpException {
         try {
             String line = reader.readLine().trim();
             while (line != null && !line.isEmpty()) {
@@ -111,37 +118,82 @@ public class HttpRequest {
         } catch (IOException e) {
             throw new HttpException(HttpStatusCode.INTERNAL_SERVER_ERROR);
         }
+    }
 
+    private void decodeParameters() throws HttpException {
         // check if it is a POST request, where we may have the
         // parameters right after the headers
-        if (method == HttpMethod.POST) {
-            String contentType = headers.get(HttpRequestHeader.ContentType);
-            if (contentType.equalsIgnoreCase("application/x-www-form-urlencoded")) {
-                try {
-                    String line = reader.readLine().trim();
-                    if (line != null && !line.isEmpty()) {
-                        // name=John+Doe&age=25&...
-                        String[] params = line.split("&");
-                        for (String param : params) {
-                            String[] paramPart = param.split("=", 2);
-                            if (paramPart.length != 2) {
-                                throw new HttpException(HttpStatusCode.BAD_REQUEST);
-                            }
-                            // separate key-value pairs and decode them
-                            String pKey = URLDecoder.decode(paramPart[0], "UTF-8");
-                            String pVal = URLDecoder.decode(paramPart[1], "UTF-8");
-                            // add it to the parameters map
-                            parameters.put(pKey, pVal);
+        if (method != HttpMethod.POST) {
+            return;
+        }
+
+        // if there is no Content-Length header or it's set to zero,
+        // there is no need to check for parameters
+        String contentLength = headers.get(HttpRequestHeader.ContentLength);
+        if (contentLength == null || contentLength.equalsIgnoreCase("0")) {
+            return;
+        }
+        int contentLengthValue;
+        try {
+            contentLengthValue = Integer.parseInt(contentLength);
+        } catch (NumberFormatException e) {
+            throw new HttpException(HttpStatusCode.BAD_REQUEST);
+        }
+
+        // if there is Content-Length but no Content-Type,
+        // then this is a bad request
+        String contentType = headers.get(HttpRequestHeader.ContentType);
+        if (contentType == null) {
+            throw new HttpException(HttpStatusCode.BAD_REQUEST);
+        }
+
+        if (contentType.contains("application/x-www-form-urlencoded")) {
+            try {
+                // default encoding is utf-8
+                String encoding = "UTF-8";
+                // matches "charset=XXX" and we extract XXX
+                Pattern charsetPattern = Pattern.compile("charset=(.+)",
+                        Pattern.CASE_INSENSITIVE);
+                // get the encoding from the content-type
+                Matcher charsetMatcher = charsetPattern.matcher(contentType);
+                if (charsetMatcher.find()) {
+                    if (charsetMatcher.groupCount() == 1) {
+                        // make sure there is an actual value
+                        String val = charsetMatcher.group(1).trim();
+                        if (!val.isEmpty()) {
+                            encoding = val;
                         }
                     }
-                } catch (IOException e) {
-                    throw new HttpException(HttpStatusCode.INTERNAL_SERVER_ERROR);
                 }
-            } else if (contentType.equalsIgnoreCase("multipart/form-data")) {
-                throw new HttpException(HttpStatusCode.NOT_IMPLEMENTED);
-            } else {
-                throw new HttpException(HttpStatusCode.BAD_REQUEST);
+
+                // read the parameters line using the content-length from header
+                char[] buff = new char[contentLengthValue];
+                reader.read(buff);
+                String line = String.valueOf(buff);
+                new String();
+                if (line != null && !line.isEmpty()) {
+                    // name=John+Doe&age=25&...
+                    String[] params = line.split("&");
+                    for (String param : params) {
+                        String[] paramPart = param.split("=", 2);
+                        if (paramPart.length != 2) {
+                            throw new HttpException(HttpStatusCode.BAD_REQUEST);
+                        }
+                        // separate key-value pairs and decode them
+                        String pKey = URLDecoder.decode(paramPart[0], encoding);
+                        String pVal = URLDecoder.decode(paramPart[1], encoding);
+                        // add it to the parameters map
+                        parameters.put(pKey, pVal);
+                    }
+                }
+            } catch (IOException e) {
+                throw new HttpException(HttpStatusCode.INTERNAL_SERVER_ERROR);
             }
+        } else if (contentType.contains("multipart/form-data")) {
+            // TODO: implement multipart/form-data decoding for POST
+            throw new HttpException(HttpStatusCode.NOT_IMPLEMENTED);
+        } else {
+            throw new HttpException(HttpStatusCode.BAD_REQUEST);
         }
     }
 }
