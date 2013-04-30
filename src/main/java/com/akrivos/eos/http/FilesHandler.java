@@ -30,7 +30,10 @@ public class FilesHandler implements Handler {
     }
 
     /**
-     * Handles.
+     * Handles the connection by trying to create an {@link HttpRequest}
+     * and check whether the request is about a file or a directory.
+     * If the request is not valid, the appropriate {@link HttpException}
+     * is thrown and an error page is generated and sent based on it.
      *
      * @param socket the client socket.
      * @return true if the request was handled successfully, false otherwise.
