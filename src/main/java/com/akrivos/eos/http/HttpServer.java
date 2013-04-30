@@ -8,6 +8,7 @@ import java.net.Socket;
  * An implementation of a {@link Server} for an HTTP Server.
  */
 public class HttpServer implements Server {
+    public static final String SERVER_NAME = "EOS/0.1";
     public static final String HTTP_VERSION = "HTTP/1.1";
     public static final String CRLF = "\r\n";
     public static final String SP = " ";

@@ -62,11 +62,16 @@ public class HttpRequest {
         try {
             requestLine = reader.readLine();
             if (logger.isInfoEnabled()) {
-                logger.info(requestLine);
+                logger.info(String.format("Request: %s", requestLine));
             }
         } catch (IOException e) {
             throw new HttpException(HttpStatusCode.INTERNAL_SERVER_ERROR);
         }
+
+        if (requestLine == null || requestLine.isEmpty()) {
+            throw new HttpException(HttpStatusCode.BAD_REQUEST);
+        }
+
         String[] requestParts = requestLine.split(HttpServer.SP);
 
         // check if we have a valid request which comprises of the three

@@ -4,7 +4,7 @@ import com.akrivos.eos.Handler;
 import com.akrivos.eos.Server;
 import com.akrivos.eos.http.constants.HttpResponseHeader;
 import com.akrivos.eos.http.constants.HttpStatusCode;
-import org.apache.log4j.Logger;
+import com.akrivos.eos.utils.MimeTypes;
 
 import java.io.*;
 import java.net.Socket;
@@ -13,8 +13,6 @@ import java.net.Socket;
  * An implementation of a {@link Handler} for file managing on an HTTP Server.
  */
 public class FilesHandler implements Handler {
-    private static final Logger logger = Logger.getLogger(FilesHandler.class);
-
     private final String root;
     private Server server;
 
@@ -24,7 +22,11 @@ public class FilesHandler implements Handler {
      * @param root the door directory.
      */
     public FilesHandler(String root) {
-        this.root = root;
+        if (root.startsWith("~")) {
+            this.root = root.replaceFirst("~", System.getProperty("user.home"));
+        } else {
+            this.root = root;
+        }
     }
 
     /**
@@ -40,9 +42,9 @@ public class FilesHandler implements Handler {
         try {
             request = new HttpRequest(socket.getInputStream());
             if (isRequestUriFile(request.getUri())) {
-                sendFile(request.getUri(), socket.getOutputStream());
+                sendFile(request, socket.getOutputStream());
             } else {
-                sendDirectoryList(request.getUri(), socket.getOutputStream());
+                sendDirectoryList(request, socket.getOutputStream());
             }
         } catch (HttpException e) {
             sendError(request, socket.getOutputStream(), e);
@@ -76,9 +78,11 @@ public class FilesHandler implements Handler {
      *                       file or directory does not exist, or
      *                       {@link HttpStatusCode#FORBIDDEN} if the
      *                       file or directory cannot be accessed.
+     * @throws IOException   any IOException that might occur.
      */
-    private boolean isRequestUriFile(String uri) throws HttpException {
-        File file = new File(root, uri);
+    private boolean isRequestUriFile(String uri)
+            throws HttpException, IOException {
+        File file = new File(root, uri).getCanonicalFile();
         if (!file.exists()) {
             throw new HttpException(HttpStatusCode.NOT_FOUND);
         }
@@ -88,11 +92,34 @@ public class FilesHandler implements Handler {
         return file.isFile();
     }
 
-    private void sendDirectoryList(String uri, OutputStream out) {
-        //
+    private void sendFile(HttpRequest request, OutputStream out)
+            throws Exception {
+        File file = new File(root, request.getUri()).getCanonicalFile();
+        HttpResponse response = new HttpResponse(request, out);
+
+        InputStream in = null;
+        try {
+            in = new BufferedInputStream(new FileInputStream(file));
+            ByteArrayOutputStream body = new ByteArrayOutputStream();
+            byte[] buffer = new byte[4 * 1024];
+            int bytesRead;
+            while ((bytesRead = in.read(buffer)) > 0) {
+                if (bytesRead > 0) {
+                    body.write(buffer, 0, bytesRead);
+                }
+            }
+            response.setHeader(HttpResponseHeader.ContentType,
+                    MimeTypes.INSTANCE.getMimeTypeFor(file.getCanonicalPath()));
+            response.setBody(body.toByteArray());
+            response.send();
+        } finally {
+            if (in != null) {
+                in.close();
+            }
+        }
     }
 
-    private void sendFile(String uri, OutputStream out) {
+    private void sendDirectoryList(HttpRequest request, OutputStream out) {
         //
     }
 
@@ -108,14 +135,18 @@ public class FilesHandler implements Handler {
     private void sendError(HttpRequest request, OutputStream out, HttpException e)
             throws Exception {
         // read html error page template from resources
-        InputStream is = getClass().getResourceAsStream("/error.html");
-        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+        InputStream in = getClass().getResourceAsStream("/templates/error.html");
+        BufferedReader reader = new BufferedReader(new InputStreamReader(in));
         StringBuilder errorHtml = new StringBuilder();
         String line;
         // build the final html output by replacing the templated text
         while ((line = reader.readLine()) != null) {
-            line = line.replace("${TITLE}",
-                    String.format("%s - %s", e.getCode(), e.getMessage()));
+            if (line.contains("${TITLE}")) {
+                line = line.replace("${TITLE}",
+                        String.format("%s - %s", e.getCode(), e.getMessage()));
+            } else if (line.contains("${SERVER}")) {
+                line = line.replace("${SERVER}", HttpServer.SERVER_NAME);
+            }
             errorHtml.append(line + "\n");
         }
         // send error response

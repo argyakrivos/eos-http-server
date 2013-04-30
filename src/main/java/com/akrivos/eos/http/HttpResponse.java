@@ -4,9 +4,7 @@ import com.akrivos.eos.http.constants.HttpMethod;
 import com.akrivos.eos.http.constants.HttpResponseHeader;
 import com.akrivos.eos.http.constants.HttpStatusCode;
 
-import java.io.BufferedWriter;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -16,20 +14,21 @@ import java.util.TimeZone;
 
 public class HttpResponse {
     private final Map<HttpResponseHeader, String> headers;
-    private final BufferedWriter writer;
+    private final DataOutputStream writer;
     private HttpStatusCode statusCode;
-    private String body;
+    private byte[] body;
     private boolean wasHeadRequest;
 
     public HttpResponse(HttpRequest request, OutputStream out) {
         headers = new HashMap<HttpResponseHeader, String>();
-        writer = new BufferedWriter(new OutputStreamWriter(out));
+        writer = new DataOutputStream(new BufferedOutputStream(out));
         wasHeadRequest = (request != null && request.getMethod() == HttpMethod.HEAD);
+        setStatusCode(HttpStatusCode.OK);
     }
 
     public HttpResponse(HttpRequest request, OutputStream out, HttpException e) {
         headers = new HashMap<HttpResponseHeader, String>();
-        writer = new BufferedWriter(new OutputStreamWriter(out));
+        writer = new DataOutputStream(new BufferedOutputStream(out));
         wasHeadRequest = (request != null && request.getMethod() == HttpMethod.HEAD);
         setStatusCode(HttpStatusCode.forCode(e.getCode()));
     }
@@ -50,11 +49,15 @@ public class HttpResponse {
         headers.put(header, value);
     }
 
-    public String getBody() {
+    public byte[] getBody() {
         return body;
     }
 
-    public void setBody(String body) {
+    public void setBody(String body) throws UnsupportedEncodingException {
+        this.body = body.getBytes("UTF-8");
+    }
+
+    public void setBody(byte[] body) {
         this.body = body;
     }
 
@@ -64,19 +67,20 @@ public class HttpResponse {
         df.setTimeZone(TimeZone.getTimeZone("GMT"));
 
         setHeader(HttpResponseHeader.Date, df.format(new Date()));
-        setHeader(HttpResponseHeader.ContentLength, String.valueOf(body.length()));
-        //setHeader(HttpResponseHeader.Connection, "close");
+        setHeader(HttpResponseHeader.ContentLength, String.valueOf(body.length));
+        setHeader(HttpResponseHeader.Connection, "close");
 
         writeStatusLine();
         writeHeaders();
         if (!wasHeadRequest) {
             writeBody();
         }
+        writer.flush();
     }
 
     private void writeStatusLine() throws Exception {
         // Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
-        writer.write(String.format("%s%s%s%s%s%s",
+        writer.writeBytes(String.format("%s%s%s%s%s%s",
                 HttpServer.HTTP_VERSION,
                 HttpServer.SP,
                 statusCode.getStatusCode(),
@@ -90,15 +94,14 @@ public class HttpResponse {
             String headerStr = String.format("%s: %s%s",
                     header.getKey().getName(),
                     header.getValue(), HttpServer.CRLF);
-            writer.write(headerStr);
+            writer.writeBytes(headerStr);
         }
     }
 
     private void writeBody() throws Exception {
         // line separating body from headers
-        writer.write(HttpServer.CRLF);
+        writer.writeBytes(HttpServer.CRLF);
         // write body
         writer.write(body);
-        writer.flush();
     }
 }
