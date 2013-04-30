@@ -1,5 +1,6 @@
 package com.akrivos.eos.http;
 
+import com.akrivos.eos.http.constants.HttpMethod;
 import com.akrivos.eos.http.constants.HttpResponseHeader;
 import com.akrivos.eos.http.constants.HttpStatusCode;
 
@@ -14,22 +15,22 @@ import java.util.Map.Entry;
 import java.util.TimeZone;
 
 public class HttpResponse {
-    private final HttpRequest request;
     private final Map<HttpResponseHeader, String> headers;
     private final BufferedWriter writer;
     private HttpStatusCode statusCode;
     private String body;
+    private boolean wasHeadRequest;
 
-    public HttpResponse(HttpRequest request, OutputStream outputStream) {
-        this.request = request;
+    public HttpResponse(HttpRequest request, OutputStream out) {
         headers = new HashMap<HttpResponseHeader, String>();
-        writer = new BufferedWriter(new OutputStreamWriter(outputStream));
+        writer = new BufferedWriter(new OutputStreamWriter(out));
+        wasHeadRequest = (request != null && request.getMethod() == HttpMethod.HEAD);
     }
 
-    public HttpResponse(HttpException e, OutputStream outputStream) {
-        request = null;
+    public HttpResponse(HttpRequest request, OutputStream out, HttpException e) {
         headers = new HashMap<HttpResponseHeader, String>();
-        writer = new BufferedWriter(new OutputStreamWriter(outputStream));
+        writer = new BufferedWriter(new OutputStreamWriter(out));
+        wasHeadRequest = (request != null && request.getMethod() == HttpMethod.HEAD);
         setStatusCode(HttpStatusCode.forCode(e.getCode()));
     }
 
@@ -64,11 +65,13 @@ public class HttpResponse {
 
         setHeader(HttpResponseHeader.Date, df.format(new Date()));
         setHeader(HttpResponseHeader.ContentLength, String.valueOf(body.length()));
-        setHeader(HttpResponseHeader.Connection, "close");
+        //setHeader(HttpResponseHeader.Connection, "close");
 
         writeStatusLine();
         writeHeaders();
-        writeBody();
+        if (!wasHeadRequest) {
+            writeBody();
+        }
     }
 
     private void writeStatusLine() throws Exception {

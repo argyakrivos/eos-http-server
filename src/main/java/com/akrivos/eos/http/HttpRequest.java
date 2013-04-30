@@ -3,6 +3,7 @@ package com.akrivos.eos.http;
 import com.akrivos.eos.http.constants.HttpMethod;
 import com.akrivos.eos.http.constants.HttpRequestHeader;
 import com.akrivos.eos.http.constants.HttpStatusCode;
+import org.apache.log4j.Logger;
 
 import java.io.*;
 import java.net.URLDecoder;
@@ -12,7 +13,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class HttpRequest {
-    public static final int MAX_URI_LENGTH = 4096;
+    private static final Logger logger = Logger.getLogger(HttpRequest.class);
+    private static final int MAX_URI_LENGTH = 4096;
 
     private final Map<HttpRequestHeader, String> headers;
     private final Map<String, String> parameters;
@@ -59,6 +61,9 @@ public class HttpRequest {
         String requestLine;
         try {
             requestLine = reader.readLine();
+            if (logger.isInfoEnabled()) {
+                logger.info(requestLine);
+            }
         } catch (IOException e) {
             throw new HttpException(HttpStatusCode.INTERNAL_SERVER_ERROR);
         }
@@ -127,12 +132,21 @@ public class HttpRequest {
             return;
         }
 
+        String contentType = headers.get(HttpRequestHeader.ContentType);
+        String contentLength = headers.get(HttpRequestHeader.ContentLength);
+
+        // if there is Content-Type but no Content-Length
+        if (contentType != null && (contentLength == null || contentLength.equals("0"))) {
+            throw new HttpException(HttpStatusCode.LENGTH_REQUIRED);
+        }
+
         // if there is no Content-Length header or it's set to zero,
         // there is no need to check for parameters
-        String contentLength = headers.get(HttpRequestHeader.ContentLength);
         if (contentLength == null || contentLength.equalsIgnoreCase("0")) {
             return;
         }
+
+        // parse Content-Length to int
         int contentLengthValue;
         try {
             contentLengthValue = Integer.parseInt(contentLength);
@@ -142,35 +156,33 @@ public class HttpRequest {
 
         // if there is Content-Length but no Content-Type,
         // then this is a bad request
-        String contentType = headers.get(HttpRequestHeader.ContentType);
         if (contentType == null) {
             throw new HttpException(HttpStatusCode.BAD_REQUEST);
         }
 
+        // default encoding is utf-8
+        String encoding = "UTF-8";
+        // matches "charset=XXX" and we extract XXX
+        Pattern charsetPattern = Pattern.compile("charset=(.+)",
+                Pattern.CASE_INSENSITIVE);
+        // get the encoding from the content-type
+        Matcher charsetMatcher = charsetPattern.matcher(contentType);
+        if (charsetMatcher.find()) {
+            if (charsetMatcher.groupCount() == 1) {
+                // make sure there is an actual value
+                String val = charsetMatcher.group(1).trim();
+                if (!val.isEmpty()) {
+                    encoding = val;
+                }
+            }
+        }
+
         if (contentType.contains("application/x-www-form-urlencoded")) {
             try {
-                // default encoding is utf-8
-                String encoding = "UTF-8";
-                // matches "charset=XXX" and we extract XXX
-                Pattern charsetPattern = Pattern.compile("charset=(.+)",
-                        Pattern.CASE_INSENSITIVE);
-                // get the encoding from the content-type
-                Matcher charsetMatcher = charsetPattern.matcher(contentType);
-                if (charsetMatcher.find()) {
-                    if (charsetMatcher.groupCount() == 1) {
-                        // make sure there is an actual value
-                        String val = charsetMatcher.group(1).trim();
-                        if (!val.isEmpty()) {
-                            encoding = val;
-                        }
-                    }
-                }
-
                 // read the parameters line using the content-length from header
                 char[] buff = new char[contentLengthValue];
                 reader.read(buff);
                 String line = String.valueOf(buff);
-                new String();
                 if (line != null && !line.isEmpty()) {
                     // name=John+Doe&age=25&...
                     String[] params = line.split("&");

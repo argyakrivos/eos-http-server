@@ -6,9 +6,7 @@ import com.akrivos.eos.http.constants.HttpResponseHeader;
 import com.akrivos.eos.http.constants.HttpStatusCode;
 import org.apache.log4j.Logger;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.Socket;
 
 /**
@@ -38,32 +36,16 @@ public class FilesHandler implements Handler {
      */
     @Override
     public boolean handle(Socket socket) throws Exception {
-        HttpRequest request;
-        HttpResponse response;
+        HttpRequest request = null;
         try {
             request = new HttpRequest(socket.getInputStream());
-            if (logger.isInfoEnabled()) {
-                logger.info(String.format("%s %s HTTP/%s", request.getMethod(),
-                        request.getUri(), request.getHttpVersion()));
+            if (isRequestUriFile(request.getUri())) {
+                sendFile(request.getUri(), socket.getOutputStream());
+            } else {
+                sendDirectoryList(request.getUri(), socket.getOutputStream());
             }
-
-            response = new HttpResponse(request, socket.getOutputStream());
         } catch (HttpException e) {
-            // generate error html
-            InputStream is = getClass().getResourceAsStream("/error.html");
-            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-            StringBuilder errorHtml = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                line = line.replace("${TITLE}", e.getCode() + " " + e.getMessage());
-                errorHtml.append(line + "\n");
-            }
-            // send error response
-            response = new HttpResponse(e, socket.getOutputStream());
-            response.setHeader(HttpResponseHeader.ContentType,
-                    "text/html; charset=utf-8");
-            response.setBody(errorHtml.toString());
-            response.send();
+            sendError(request, socket.getOutputStream(), e);
         }
         return true;
     }
@@ -82,5 +64,65 @@ public class FilesHandler implements Handler {
     @Override
     public void setServer(Server server) {
         this.server = server;
+    }
+
+    /**
+     * Checks if the requested file path exist and can be read. Then it
+     * returns true or false, whether it is a normal file or a directory.
+     *
+     * @param uri the requested file path.
+     * @return true if the uri is a normal file, false if it is a directory.
+     * @throws HttpException {@link HttpStatusCode#NOT_FOUND} if the
+     *                       file or directory does not exist, or
+     *                       {@link HttpStatusCode#FORBIDDEN} if the
+     *                       file or directory cannot be accessed.
+     */
+    private boolean isRequestUriFile(String uri) throws HttpException {
+        File file = new File(root, uri);
+        if (!file.exists()) {
+            throw new HttpException(HttpStatusCode.NOT_FOUND);
+        }
+        if (!file.canRead()) {
+            throw new HttpException(HttpStatusCode.FORBIDDEN);
+        }
+        return file.isFile();
+    }
+
+    private void sendDirectoryList(String uri, OutputStream out) {
+        //
+    }
+
+    private void sendFile(String uri, OutputStream out) {
+        //
+    }
+
+    /**
+     * Generates the HTML error page based on the {@link HttpRequest} and
+     * the {@link HttpException} and sends it as a {@link HttpResponse}.
+     *
+     * @param request the {@link HttpRequest}.
+     * @param out     {@link OutputStream} from the client {@link Socket}.
+     * @param e       the {@link HttpException}.
+     * @throws Exception any exception that might occur.
+     */
+    private void sendError(HttpRequest request, OutputStream out, HttpException e)
+            throws Exception {
+        // read html error page template from resources
+        InputStream is = getClass().getResourceAsStream("/error.html");
+        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+        StringBuilder errorHtml = new StringBuilder();
+        String line;
+        // build the final html output by replacing the templated text
+        while ((line = reader.readLine()) != null) {
+            line = line.replace("${TITLE}",
+                    String.format("%s - %s", e.getCode(), e.getMessage()));
+            errorHtml.append(line + "\n");
+        }
+        // send error response
+        HttpResponse response = new HttpResponse(request, out, e);
+        response.setHeader(HttpResponseHeader.ContentType,
+                "text/html; charset=utf-8");
+        response.setBody(errorHtml.toString());
+        response.send();
     }
 }
