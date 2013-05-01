@@ -12,7 +12,7 @@ public class ServerThreadPool extends ThreadPoolExecutor implements ThreadPool {
 
     private static final int CORE_POOL_SIZE = 16;
     private static final int MAX_POOL_SIZE = 64;
-    private static final int KEEP_ALIVE_TIME = 30;
+    private static final int KEEP_ALIVE_TIME = 60;
     private static final int QUEUE_SIZE = 10;
 
     /**

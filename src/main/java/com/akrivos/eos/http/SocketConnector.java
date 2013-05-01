@@ -62,8 +62,8 @@ public class SocketConnector implements Connector {
                             // and increase performance.
                             socket.setTcpNoDelay(true);
 
-                            // keep-alive for 30 seconds.
-                            socket.setSoTimeout(30 * 1000);
+                            // keep-alive for 15 seconds.
+                            socket.setSoTimeout(15 * 1000);
 
                             // add to ThreadPool
                             if (logger.isDebugEnabled()) {
