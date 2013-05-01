@@ -66,6 +66,7 @@ public class HttpResponse {
         SimpleDateFormat df = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
         df.setTimeZone(TimeZone.getTimeZone("GMT"));
 
+        setHeader(HttpResponseHeader.Server, HttpServer.SERVER_NAME);
         setHeader(HttpResponseHeader.Date, df.format(new Date()));
         setHeader(HttpResponseHeader.ContentLength, String.valueOf(body.length));
         setHeader(HttpResponseHeader.Connection, "close");
