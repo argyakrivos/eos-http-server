@@ -16,17 +16,17 @@ import java.util.regex.Pattern;
 public enum Settings {
     INSTANCE;
 
-    public static final SettingKey<String> SERVER_ADDRESS
-            = new SettingKey<String>("server.address", "0.0.0.0");
+    public static final SettingKey<String> SERVER_ADDRESS =
+            new SettingKey<String>("server.address", "0.0.0.0");
 
-    public static final SettingKey<Integer> SERVER_PORT
-            = new SettingKey<Integer>("server.port", 8080);
+    public static final SettingKey<Integer> SERVER_PORT =
+            new SettingKey<Integer>("server.port", 8080);
 
-    public static final SettingKey<String> SERVER_ROOT
-            = new SettingKey<String>("server.root", "~/www");
+    public static final SettingKey<String> SERVER_ROOT =
+            new SettingKey<String>("server.root", "~/www");
 
-    public static final SettingKey<String> SERVER_INDEX_NAMES
-            = new SettingKey<String>("server.index.names", "index.html index.htm");
+    public static final SettingKey<String> SERVER_INDEX_NAMES =
+            new SettingKey<String>("server.index.names", "index.html index.htm");
 
     private static final Logger logger = Logger.getLogger(Settings.class);
     private final Map<String, String> map;
