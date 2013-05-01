@@ -25,6 +25,9 @@ public enum Settings {
     public static final SettingKey<String> SERVER_ROOT
             = new SettingKey<String>("server.root", "~/www");
 
+    public static final SettingKey<String> SERVER_INDEX_NAMES
+            = new SettingKey<String>("server.index.names", "index.html index.htm");
+
     private static final Logger logger = Logger.getLogger(Settings.class);
     private final Map<String, String> map;
 
