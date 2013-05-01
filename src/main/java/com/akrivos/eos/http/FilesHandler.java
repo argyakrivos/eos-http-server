@@ -26,11 +26,7 @@ public class FilesHandler implements Handler {
      * @param root the door directory.
      */
     public FilesHandler(String root) {
-        if (root.startsWith("~")) {
-            this.root = root.replaceFirst("~", System.getProperty("user.home"));
-        } else {
-            this.root = root;
-        }
+        this.root = root;
     }
 
     /**

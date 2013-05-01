@@ -48,15 +48,20 @@ public enum Settings {
      */
     public String getValueFor(SettingKey<String> settingKey) {
         String value = map.get(settingKey.getKey());
-        if (value != null)
-            return value;
+        if (value != null) {
+            // special case for SERVER_ROOT with ~
+            if (settingKey == SERVER_ROOT && value.startsWith("~")) {
+                return value.replaceFirst("~", System.getProperty("user.home"));
+            } else {
+                return value;
+            }
+        }
 
         if (logger.isTraceEnabled()) {
             logger.trace("There is no setting for " + settingKey.getKey()
                     + ". Returning default value: "
                     + settingKey.getDefaultValue());
         }
-
         return settingKey.getDefaultValue();
     }
 
@@ -71,15 +76,15 @@ public enum Settings {
     public int getValueAsIntegerFor(SettingKey<Integer> settingKey) {
         try {
             String value = map.get(settingKey.getKey());
-            if (value != null)
+            if (value != null) {
                 return Integer.parseInt(value);
+            }
 
             if (logger.isTraceEnabled()) {
                 logger.trace("There is no setting for " + settingKey.getKey()
                         + ". Returning default value: "
                         + settingKey.getDefaultValue());
             }
-
             return settingKey.getDefaultValue();
         } catch (NumberFormatException ex) {
             if (logger.isDebugEnabled()) {
@@ -106,7 +111,6 @@ public enum Settings {
                 final String keyStr = String.valueOf(key);
                 map.put(keyStr, props.getProperty(keyStr));
             }
-
         } catch (IOException ex) {
             logger.error("Could not load configuration from properties file: "
                     + propertiesFile + ". Using default server configuration");
@@ -143,7 +147,6 @@ public enum Settings {
             }
 
             String root = Settings.INSTANCE.getValueFor(Settings.SERVER_ROOT);
-            root = root.replace("~", System.getProperty("user.home"));
             File rootDirectory = new File(root);
             if (!rootDirectory.getCanonicalFile().isDirectory()) {
                 logger.error("Error in server configuration: The server root "
