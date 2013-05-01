@@ -4,7 +4,10 @@ import com.akrivos.eos.http.constants.HttpMethod;
 import com.akrivos.eos.http.constants.HttpResponseHeader;
 import com.akrivos.eos.http.constants.HttpStatusCode;
 
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -15,6 +18,7 @@ import java.util.TimeZone;
 public class HttpResponse {
     private final Map<HttpResponseHeader, String> headers;
     private final DataOutputStream writer;
+    private final SimpleDateFormat df;
     private HttpStatusCode statusCode;
     private byte[] body;
     private boolean wasHeadRequest;
@@ -23,14 +27,13 @@ public class HttpResponse {
         headers = new HashMap<HttpResponseHeader, String>();
         writer = new DataOutputStream(new BufferedOutputStream(out));
         wasHeadRequest = (request != null && request.getMethod() == HttpMethod.HEAD);
-        setStatusCode(HttpStatusCode.OK);
-    }
 
-    public HttpResponse(HttpRequest request, OutputStream out, HttpException e) {
-        headers = new HashMap<HttpResponseHeader, String>();
-        writer = new DataOutputStream(new BufferedOutputStream(out));
-        wasHeadRequest = (request != null && request.getMethod() == HttpMethod.HEAD);
-        setStatusCode(HttpStatusCode.forCode(e.getCode()));
+        // RFC 1123 date format
+        df = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
+        df.setTimeZone(TimeZone.getTimeZone("GMT"));
+
+        // default status code
+        setStatusCode(HttpStatusCode.OK);
     }
 
     public HttpStatusCode getStatusCode() {
@@ -55,26 +58,28 @@ public class HttpResponse {
 
     public void setBody(String body) throws UnsupportedEncodingException {
         this.body = body.getBytes("UTF-8");
+        setHeader(HttpResponseHeader.ContentLength, String.valueOf(body.length()));
     }
 
     public void setBody(byte[] body) {
         this.body = body;
+        setHeader(HttpResponseHeader.ContentLength, String.valueOf(body.length));
+    }
+
+    public void setLastModified(Date date) {
+        setHeader(HttpResponseHeader.LastModified, df.format(date));
     }
 
     public void send() throws Exception {
-        // RFC 1123 date format
-        SimpleDateFormat df = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
-        df.setTimeZone(TimeZone.getTimeZone("GMT"));
-
-        setHeader(HttpResponseHeader.Server, HttpServer.SERVER_NAME);
         setHeader(HttpResponseHeader.Date, df.format(new Date()));
-        setHeader(HttpResponseHeader.ContentLength, String.valueOf(body.length));
-        setHeader(HttpResponseHeader.Connection, "close");
+        setHeader(HttpResponseHeader.Server, HttpServer.SERVER_NAME);
 
         writeStatusLine();
         writeHeaders();
         if (!wasHeadRequest) {
             writeBody();
+        } else {
+            writer.writeBytes(HttpServer.CRLF);
         }
         writer.flush();
     }
