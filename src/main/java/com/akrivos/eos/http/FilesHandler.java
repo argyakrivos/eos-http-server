@@ -8,6 +8,8 @@ import com.akrivos.eos.utils.MimeTypes;
 
 import java.io.*;
 import java.net.Socket;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 /**
  * An implementation of a {@link Handler} for file managing on an HTTP Server.
@@ -99,7 +101,6 @@ public class FilesHandler implements Handler {
             throws Exception {
         File file = new File(root, request.getUri()).getCanonicalFile();
         HttpResponse response = new HttpResponse(request, out);
-
         InputStream in = null;
         try {
             in = new BufferedInputStream(new FileInputStream(file));
@@ -122,8 +123,72 @@ public class FilesHandler implements Handler {
         }
     }
 
-    private void sendDirectoryList(HttpRequest request, OutputStream out) {
-        //
+    private void sendDirectoryList(HttpRequest request, OutputStream out)
+            throws Exception {
+        File dir = new File(root, request.getUri()).getCanonicalFile();
+        File[] files = dir.listFiles();
+        List<File> filesList = new ArrayList<File>(Arrays.asList(files));
+        Collections.sort(filesList, new Comparator<File>() {
+            @Override
+            public int compare(File x, File y) {
+                if (x.isDirectory() && !y.isDirectory()) {
+                    return -1;
+                }
+                if (x.isDirectory() && y.isDirectory()) {
+                    return 0;
+                }
+                if (!x.isDirectory() && y.isDirectory()) {
+                    return 1;
+                }
+                return x.getName().compareTo(y.getName());
+            }
+        });
+
+        // read html directory listing template from resources
+        InputStream in = getClass().getResourceAsStream("/templates/listing.html");
+        BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+        StringBuilder html = new StringBuilder();
+        String line;
+        // build the final html output by replacing the templated text
+        while ((line = reader.readLine()) != null) {
+            if (line.contains("${PATH}")) {
+                line = line.replace("${PATH}", request.getUri());
+            } else if (line.contains("${ITEM.NAME}")) {
+                for (File f : filesList) {
+                    SimpleDateFormat df = new SimpleDateFormat(
+                            "yyyy-MMM-dd HH:mm:ss zzz");
+                    boolean isDirectory = f.isDirectory();
+                    String fileLine = line;
+                    String fName = f.getName();
+                    String itemSize = isDirectory
+                            ? "--"
+                            : readableSize(f.length(), true);
+                    String itemType = isDirectory
+                            ? "Directory"
+                            : MimeTypes.INSTANCE.getMimeTypeFor(f.getCanonicalPath());
+                    String itemLink = isDirectory ? f.getName() + "/" : fName;
+                    String itemBs = isDirectory ? "/" : "";
+                    String itemDate = df.format(new Date(f.lastModified()));
+                    fileLine = fileLine.replace("${ITEM.LINK}", itemLink);
+                    fileLine = fileLine.replace("${ITEM.NAME}", fName);
+                    fileLine = fileLine.replace("${ITEM.BS}", itemBs);
+                    fileLine = fileLine.replace("${ITEM.MODIFIED}", itemDate);
+                    fileLine = fileLine.replace("${ITEM.SIZE}", itemSize);
+                    fileLine = fileLine.replace("${ITEM.TYPE}", itemType);
+                    html.append(fileLine + "\n");
+                }
+                continue;
+            } else if (line.contains("${SERVER}")) {
+                line = line.replace("${SERVER}", HttpServer.SERVER_NAME);
+            }
+            html.append(line + "\n");
+        }
+        // send directory listing response
+        HttpResponse response = new HttpResponse(request, out);
+        response.setHeader(HttpResponseHeader.ContentType,
+                "text/html; charset=utf-8");
+        response.setBody(html.toString());
+        response.send();
     }
 
     /**
@@ -140,7 +205,7 @@ public class FilesHandler implements Handler {
         // read html error page template from resources
         InputStream in = getClass().getResourceAsStream("/templates/error.html");
         BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-        StringBuilder errorHtml = new StringBuilder();
+        StringBuilder html = new StringBuilder();
         String line;
         // build the final html output by replacing the templated text
         while ((line = reader.readLine()) != null) {
@@ -150,13 +215,30 @@ public class FilesHandler implements Handler {
             } else if (line.contains("${SERVER}")) {
                 line = line.replace("${SERVER}", HttpServer.SERVER_NAME);
             }
-            errorHtml.append(line + "\n");
+            html.append(line + "\n");
         }
         // send error response
         HttpResponse response = new HttpResponse(request, out, e);
         response.setHeader(HttpResponseHeader.ContentType,
                 "text/html; charset=utf-8");
-        response.setBody(errorHtml.toString());
+        response.setBody(html.toString());
         response.send();
+    }
+
+    /**
+     * Transforms a size from {@link long} into a readable size with
+     * the appropriate unit (B / KB / MB / GB)
+     * http://stackoverflow.com/questions/3758606/
+     *
+     * @param bytes the size in bytes.
+     * @param si    use SI units or binary.
+     * @return a readable representation of the size with units.
+     */
+    private String readableSize(long bytes, boolean si) {
+        int unit = si ? 1000 : 1024;
+        if (bytes < unit) return bytes + " B";
+        int exp = (int) (Math.log(bytes) / Math.log(unit));
+        String pre = (si ? "kMGTPE" : "KMGTPE").charAt(exp - 1) + (si ? "" : "i");
+        return String.format("%.1f %sB", bytes / Math.pow(unit, exp), pre);
     }
 }

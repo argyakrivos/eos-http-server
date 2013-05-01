@@ -61,15 +61,16 @@ public class HttpRequest {
         String requestLine;
         try {
             requestLine = reader.readLine();
-            if (logger.isInfoEnabled()) {
-                logger.info(String.format("Request: %s", requestLine));
-            }
         } catch (IOException e) {
             throw new HttpException(HttpStatusCode.INTERNAL_SERVER_ERROR);
         }
 
         if (requestLine == null || requestLine.isEmpty()) {
             throw new HttpException(HttpStatusCode.BAD_REQUEST);
+        }
+
+        if (logger.isInfoEnabled()) {
+            logger.info(String.format("Request: %s", requestLine));
         }
 
         String[] requestParts = requestLine.split(HttpServer.SP);
