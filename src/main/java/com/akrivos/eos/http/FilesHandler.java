@@ -53,7 +53,8 @@ public class FilesHandler implements Handler {
             } else {
                 String indexFile = getIndexFileFrom(request.getUri());
                 if (indexFile != null && !indexFile.isEmpty()) {
-                    sendFile(request.getUri() + indexFile, request, socket.getOutputStream());
+                    sendFile(request.getUri() + indexFile,
+                            request, socket.getOutputStream());
                 } else {
                     sendDirectoryList(request, socket.getOutputStream());
                 }
@@ -87,9 +88,11 @@ public class FilesHandler implements Handler {
      * @param uri the requested file path.
      * @return true if the uri is a normal file, false if it is a directory.
      * @throws HttpException {@link HttpStatusCode#NOT_FOUND} if the
-     *                       file or directory does not exist, or
+     *                       file or directory does not exist.
      *                       {@link HttpStatusCode#FORBIDDEN} if the
      *                       file or directory cannot be accessed.
+     *                       {@link HttpStatusCode#MOVED_PERM} if the
+     *                       directory does not end with a slash.
      * @throws IOException   any IOException that might occur.
      */
     private boolean isRequestUriFile(String uri)
@@ -101,7 +104,11 @@ public class FilesHandler implements Handler {
         if (!file.canRead()) {
             throw new HttpException(HttpStatusCode.FORBIDDEN);
         }
-        return file.isFile();
+        boolean isFile = file.isFile();
+        if (!isFile && !uri.endsWith("/")) {
+            throw new HttpException(HttpStatusCode.MOVED_PERM);
+        }
+        return isFile;
     }
 
     /**
@@ -325,6 +332,10 @@ public class FilesHandler implements Handler {
         response.setStatusCode(HttpStatusCode.forCode(e.getCode()));
         response.setHeader(HttpResponseHeader.ContentType,
                 "text/html; charset=utf-8");
+        if (e.getCode() == HttpStatusCode.MOVED_PERM.getStatusCode()) {
+            response.setHeader(HttpResponseHeader.Location,
+                    request.getUri() + "/");
+        }
         response.setBody(html.toString());
         response.send();
     }
