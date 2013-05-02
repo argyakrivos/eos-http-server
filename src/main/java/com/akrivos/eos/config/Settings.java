@@ -23,7 +23,7 @@ public enum Settings {
             new SettingKey<Integer>("server.port", 8080);
 
     public static final SettingKey<String> SERVER_ROOT =
-            new SettingKey<String>("server.root", "~/www");
+            new SettingKey<String>("server.root", "~" + File.separator + "www");
 
     public static final SettingKey<String> SERVER_INDEX_NAMES =
             new SettingKey<String>("server.index.names", "index.html index.htm");
