@@ -52,15 +52,17 @@ public enum Settings {
             // special case for SERVER_ROOT with ~
             if (settingKey == SERVER_ROOT && value.startsWith("~")) {
                 return value.replaceFirst("~", System.getProperty("user.home"));
-            } else {
-                return value;
             }
+            return value;
         }
 
         if (logger.isTraceEnabled()) {
             logger.trace("There is no setting for " + settingKey.getKey()
                     + ". Returning default value: "
                     + settingKey.getDefaultValue());
+        }
+        if (settingKey == SERVER_ROOT && settingKey.getDefaultValue().startsWith("~")) {
+            return settingKey.getDefaultValue().replaceFirst("~", System.getProperty("user.home"));
         }
         return settingKey.getDefaultValue();
     }

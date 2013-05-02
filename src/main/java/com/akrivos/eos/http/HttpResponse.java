@@ -98,10 +98,10 @@ public class HttpResponse {
     }
 
     /**
-     * Sets the body data from {@link byte[]}.
+     * Sets the body data from byte[].
      * Also sets the Content-Length header to the data length.
      *
-     * @param body the body data in {@link byte[]}.
+     * @param body the body data in byte[].
      */
     public void setBody(byte[] body) {
         this.body = body;
