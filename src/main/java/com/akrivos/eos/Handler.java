@@ -10,7 +10,7 @@ public interface Handler {
     /**
      * Handles a task with a given {@link Socket}.
      *
-     * @param socket
+     * @param socket the client {@link Socket}.
      * @return true if the task was handled successfully, false otherwise.
      * @throws Exception any exception that might occur.
      */

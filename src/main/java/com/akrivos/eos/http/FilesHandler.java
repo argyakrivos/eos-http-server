@@ -3,6 +3,7 @@ package com.akrivos.eos.http;
 import com.akrivos.eos.Handler;
 import com.akrivos.eos.Server;
 import com.akrivos.eos.config.Settings;
+import com.akrivos.eos.http.constants.HttpMethod;
 import com.akrivos.eos.http.constants.HttpResponseHeader;
 import com.akrivos.eos.http.constants.HttpStatusCode;
 import com.akrivos.eos.utils.MimeTypes;
@@ -44,7 +45,9 @@ public class FilesHandler implements Handler {
         HttpRequest request = null;
         try {
             request = new HttpRequest(socket.getInputStream());
-            if (isRequestUriFile(request.getUri())) {
+            if (request.getMethod() == HttpMethod.OPTIONS) {
+                sendOptions(request, socket.getOutputStream());
+            } else if (isRequestUriFile(request.getUri())) {
                 sendFile(request.getUri(), request, socket.getOutputStream());
             } else {
                 String indexFile = getIndexFileFrom(request.getUri());
@@ -75,6 +78,21 @@ public class FilesHandler implements Handler {
     @Override
     public void setServer(Server server) {
         this.server = server;
+    }
+
+    /**
+     * Sends the server OPTIONS to the client.
+     *
+     * @param request the {@link HttpRequest}.
+     * @param out     the {@link OutputStream}.
+     * @throws Exception any exception that might occur.
+     */
+    private void sendOptions(HttpRequest request, OutputStream out)
+            throws Exception {
+        HttpResponse response = new HttpResponse(request, out);
+        response.setHeader(HttpResponseHeader.Allow, "GET, HEAD, POST");
+        response.setHeader(HttpResponseHeader.ContentLength, "0");
+        response.send();
     }
 
     /**

@@ -12,6 +12,10 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * A class that holds every information that describes an HTTP request.
+ * Includes headers, parameters, method, uri, http version, etc.
+ */
 public class HttpRequest {
     private static final Logger logger = Logger.getLogger(HttpRequest.class);
     private static final int MAX_URI_LENGTH = 4096;
@@ -23,6 +27,14 @@ public class HttpRequest {
     private String uri;
     private float httpVersion;
 
+    /**
+     * Creates a new {@link HttpRequest} with an {@link InputStream} from
+     * the client's {@link java.net.Socket} to start reading data.
+     *
+     * @param inputStream the {@link InputStream}.
+     * @throws HttpException any {@link HttpException} that might occur
+     *                       during the creation of an {@link HttpRequest}.
+     */
     public HttpRequest(InputStream inputStream) throws HttpException {
         headers = new HashMap<HttpRequestHeader, String>();
         parameters = new HashMap<String, String>();
@@ -30,32 +42,74 @@ public class HttpRequest {
         parseRequest();
     }
 
+    /**
+     * Returns the {@link HttpMethod}.
+     *
+     * @return the {@link HttpMethod}.
+     */
     public HttpMethod getMethod() {
         return method;
     }
 
+    /**
+     * Returns the Uri.
+     *
+     * @return the Uri.
+     */
     public String getUri() {
         return uri;
     }
 
+    /**
+     * Returns the HTTP version.
+     *
+     * @return the HTTP version.
+     */
     public float getHttpVersion() {
         return httpVersion;
     }
 
+    /**
+     * Returns the value of the given {@link HttpRequestHeader}.
+     *
+     * @param header the {@link HttpRequestHeader}.
+     * @return the value of the {@link HttpRequestHeader} if found,
+     *         null otherwise.
+     */
     public String getHeader(HttpRequestHeader header) {
         return headers.get(header);
     }
 
+    /**
+     * Returns the value of the given parameter.
+     *
+     * @param parameter the parameter's name.
+     * @return the value of the parameter if found, null otherwise.
+     */
     public String getParameter(String parameter) {
         return parameters.get(parameter);
     }
 
+    /**
+     * Parses an HTTP request in three parts: a) decodes the request line,
+     * b) decodes the headers, and c) decodes the parameters (if any).
+     *
+     * @throws HttpException any {@link HttpException} that might occur.
+     */
     private void parseRequest() throws HttpException {
         decodeRequestLine();
         decodeHeaders();
         decodeParameters();
     }
 
+    /**
+     * Decodes the first line of the HTTP request (aka Request Line).
+     * Request-Line = Method SP Request-URI SP HTTP-Version CRLF.
+     * Also checks for the validity of the request, where the
+     * appropriate {@link HttpException} is thrown, if it's invalid.
+     *
+     * @throws HttpException any {@link HttpException} that might occur.
+     */
     private void decodeRequestLine() throws HttpException {
         // Request-Line = Method SP Request-URI SP HTTP-Version CRLF
         String requestLine;
@@ -83,7 +137,11 @@ public class HttpRequest {
 
         // try to parse the HTTP method
         method = HttpMethod.forName(requestParts[0]);
-        if (method == null) {
+        if (method == null
+                || method == HttpMethod.PUT
+                || method == HttpMethod.DELETE
+                || method == HttpMethod.CONNECT
+                || method == HttpMethod.TRACE) {
             throw new HttpException(HttpStatusCode.NOT_IMPLEMENTED);
         }
 
@@ -110,11 +168,18 @@ public class HttpRequest {
         }
     }
 
+    /**
+     * Decodes the HTTP request headers and stores them in a {@link Map}.
+     * Header-Field: Header Value.
+     * It only stores supported headers by {@link HttpRequestHeader}.
+     *
+     * @throws HttpException any {@link HttpException} that might occur.
+     */
     private void decodeHeaders() throws HttpException {
         try {
             String line = reader.readLine().trim();
             while (line != null && !line.isEmpty()) {
-                // Header Field : Header Value
+                // Header-Field: Header Value
                 String[] headerPart = line.split(":", 2);
                 if (headerPart.length != 2) {
                     throw new HttpException(HttpStatusCode.BAD_REQUEST);
@@ -131,10 +196,18 @@ public class HttpRequest {
         }
     }
 
+    /**
+     * Decodes the HTTP request parameters and stores them in a {@link Map}.
+     * name=John+Doe&age=25&...
+     * Decoding parameters is only supported for POST and PUT, and for
+     * application/x-www-form-urlencoded encoding.
+     *
+     * @throws HttpException any {@link HttpException} that might occur.
+     */
     private void decodeParameters() throws HttpException {
-        // check if it is a POST request, where we may have the
+        // check if it is a POST/PUT request, where we may have the
         // parameters right after the headers
-        if (method != HttpMethod.POST) {
+        if (method != HttpMethod.POST || method != HttpMethod.PUT) {
             return;
         }
 
@@ -208,7 +281,7 @@ public class HttpRequest {
                 throw new HttpException(HttpStatusCode.INTERNAL_SERVER_ERROR);
             }
         } else if (contentType.contains("multipart/form-data")) {
-            // TODO: implement multipart/form-data decoding for POST
+            // TODO: implement multipart/form-data decoding
             throw new HttpException(HttpStatusCode.NOT_IMPLEMENTED);
         } else {
             throw new HttpException(HttpStatusCode.BAD_REQUEST);

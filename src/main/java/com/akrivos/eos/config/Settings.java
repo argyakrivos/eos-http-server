@@ -120,7 +120,7 @@ public enum Settings {
     /**
      * Checks if every setting in server configuration is valid.
      *
-     * @return true if all settings are valid; false otherwise.
+     * @return true if all settings are valid, false otherwise.
      */
     public boolean areValid() {
         try {

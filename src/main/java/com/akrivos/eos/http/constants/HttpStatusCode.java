@@ -6,7 +6,7 @@ import java.util.Map;
 
 /**
  * An enum with all HTTP status codes along with their reason-phrase.
- * Taken from: https://github.com/bigcompany/know-your-http
+ * https://github.com/bigcompany/know-your-http
  */
 public enum HttpStatusCode {
     // - 1xx: Informational
