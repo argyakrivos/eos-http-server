@@ -1,7 +1,7 @@
 EOS HTTP Server
 ===============
 
-* EOS HTTP Server is a simple multi-threaded web server written Java
+* EOS HTTP Server is a simple multi-threaded web server written in Java
 * Currently supports HTTP 1.1 **GET**, **HEAD**, **POST** and **OPTIONS** methods
 * Full file directory browsing and downloading
 * Basic configuration using a properties file
