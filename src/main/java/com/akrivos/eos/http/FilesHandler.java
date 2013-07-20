@@ -90,9 +90,10 @@ public class FilesHandler implements Handler {
     private void sendOptions(HttpRequest request, OutputStream out)
             throws Exception {
         HttpResponse response = new HttpResponse(request, out);
-        response.setHeader(HttpResponseHeader.Allow, "GET, HEAD, POST");
-        response.setHeader(HttpResponseHeader.ContentLength, "0");
-        response.send();
+        response.writeStatusLine(HttpStatusCode.OK);
+        response.writeHeader(HttpResponseHeader.Allow, "GET, HEAD, POST");
+        response.writeHeader(HttpResponseHeader.ContentLength, "0");
+        response.writeFinalHeaders();
     }
 
     /**
@@ -163,24 +164,24 @@ public class FilesHandler implements Handler {
             throws Exception {
         File file = new File(root, fileName).getCanonicalFile();
         HttpResponse response = new HttpResponse(request, out);
+        response.writeStatusLine(HttpStatusCode.OK);
+        response.writeHeader(HttpResponseHeader.ContentType,
+                MimeTypes.INSTANCE.getMimeTypeFor(file.getCanonicalPath()));
+        response.writeHeader(HttpResponseHeader.ContentLength,
+                String.valueOf(file.length()));
+        response.writeLastModified(new Date(file.lastModified()));
+        response.writeFinalHeaders();
         InputStream in = null;
         try {
             // buffered reading the file and storing its bytes contents
             in = new BufferedInputStream(new FileInputStream(file));
-            ByteArrayOutputStream body = new ByteArrayOutputStream();
             byte[] buffer = new byte[4 * 1024];
             int bytesRead;
             while ((bytesRead = in.read(buffer)) > 0) {
                 if (bytesRead > 0) {
-                    body.write(buffer, 0, bytesRead);
+                    response.writeBody(buffer, 0, bytesRead);
                 }
             }
-            // sets the appropriate headers and body and sends the request
-            response.setHeader(HttpResponseHeader.ContentType,
-                    MimeTypes.INSTANCE.getMimeTypeFor(file.getCanonicalPath()));
-            response.setBody(body.toByteArray());
-            response.setLastModified(new Date(file.lastModified()));
-            response.send();
         } finally {
             if (in != null) {
                 in.close();
@@ -239,10 +240,11 @@ public class FilesHandler implements Handler {
         }
         // send directory listing response
         HttpResponse response = new HttpResponse(request, out);
-        response.setHeader(HttpResponseHeader.ContentType,
+        response.writeStatusLine(HttpStatusCode.OK);
+        response.writeHeader(HttpResponseHeader.ContentType,
                 "text/html; charset=utf-8");
-        response.setBody(html.toString());
-        response.send();
+        response.writeFinalHeaders();
+        response.writeBody(html.toString());
     }
 
     /**
@@ -343,14 +345,14 @@ public class FilesHandler implements Handler {
         }
         // send error response
         HttpResponse response = new HttpResponse(request, out);
-        response.setStatusCode(HttpStatusCode.forCode(e.getCode()));
-        response.setHeader(HttpResponseHeader.ContentType,
+        response.writeStatusLine(HttpStatusCode.forCode(e.getCode()));
+        response.writeHeader(HttpResponseHeader.ContentType,
                 "text/html; charset=utf-8");
         if (e.getCode() == HttpStatusCode.MOVED_PERM.getStatusCode()) {
-            response.setHeader(HttpResponseHeader.Location,
+            response.writeHeader(HttpResponseHeader.Location,
                     request.getUri() + "/");
         }
-        response.setBody(html.toString());
-        response.send();
+        response.writeFinalHeaders();
+        response.writeBody(html.toString());
     }
 }

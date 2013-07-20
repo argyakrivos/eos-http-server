@@ -1,18 +1,16 @@
 package com.akrivos.eos.http;
 
-import com.akrivos.eos.http.constants.HttpMethod;
 import com.akrivos.eos.http.constants.HttpResponseHeader;
 import com.akrivos.eos.http.constants.HttpStatusCode;
 
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.TimeZone;
 
 /**
@@ -25,8 +23,6 @@ public class HttpResponse {
     private final DataOutputStream writer;
     private final SimpleDateFormat df;
     private HttpStatusCode statusCode;
-    private byte[] body;
-    private boolean wasHeadRequest;
 
     /**
      * Creates a new {@link HttpResponse} with an {@link HttpRequest} and
@@ -39,14 +35,10 @@ public class HttpResponse {
     public HttpResponse(HttpRequest request, OutputStream out) {
         headers = new HashMap<HttpResponseHeader, String>();
         writer = new DataOutputStream(new BufferedOutputStream(out));
-        wasHeadRequest = (request != null && request.getMethod() == HttpMethod.HEAD);
 
         // RFC 1123 date format
         df = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
         df.setTimeZone(TimeZone.getTimeZone("GMT"));
-
-        // default status code
-        setStatusCode(HttpStatusCode.OK);
     }
 
     /**
@@ -59,12 +51,23 @@ public class HttpResponse {
     }
 
     /**
-     * Sets the {@link HttpStatusCode}.
+     * Sets the {@link HttpStatusCode} to the given value and sends
+     * the status line to the client's {@link java.net.Socket}.
+     * Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF.
      *
      * @param statusCode the {@link HttpStatusCode}.
+     * @throws Exception any exception that might occur.
      */
-    public void setStatusCode(HttpStatusCode statusCode) {
+    public void writeStatusLine(HttpStatusCode statusCode) throws Exception {
         this.statusCode = statusCode;
+        // Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
+        writer.writeBytes(String.format("%s%s%s%s%s%s",
+                HttpServer.HTTP_VERSION,
+                HttpServer.SP,
+                statusCode.getStatusCode(),
+                HttpServer.SP,
+                statusCode.getReasonPhrase(),
+                HttpServer.CRLF));
     }
 
     /**
@@ -79,116 +82,65 @@ public class HttpResponse {
     }
 
     /**
-     * Sets the value of the given {@link HttpResponseHeader}.
+     * Adds the {@link HttpResponseHeader} to the {@link Map} and sends
+     * that header value to the client's {@link java.net.Socket}.
      *
      * @param header the {@link HttpResponseHeader}.
      * @param value  the {@link String} value.
-     */
-    public void setHeader(HttpResponseHeader header, String value) {
-        headers.put(header, value);
-    }
-
-    /**
-     * Returns the body data.
-     *
-     * @return the body data.
-     */
-    public byte[] getBody() {
-        return body;
-    }
-
-    /**
-     * Sets the body data from byte[].
-     * Also sets the Content-Length header to the data length.
-     *
-     * @param body the body data in byte[].
-     */
-    public void setBody(byte[] body) {
-        this.body = body;
-        setHeader(HttpResponseHeader.ContentLength, String.valueOf(body.length));
-    }
-
-    /**
-     * Sets the body data from {@link String}.
-     * Also sets the Content-Length header to the data length.
-     *
-     * @param body the body data in {@link String}.
-     * @throws UnsupportedEncodingException if UTF-8 is not the right encoding.
-     */
-    public void setBody(String body) throws UnsupportedEncodingException {
-        this.body = body.getBytes("UTF-8");
-        setHeader(HttpResponseHeader.ContentLength, String.valueOf(body.length()));
-    }
-
-    /**
-     * Sets the Last-Modified header using the RFC 1123 format.
-     *
-     * @param date the last modified {@link Date}.
-     */
-    public void setLastModified(Date date) {
-        setHeader(HttpResponseHeader.LastModified, df.format(date));
-    }
-
-    /**
-     * Sends the {@link HttpResponse} in three parts: a) sends the
-     * status line, b) sends the headers, and c) sends the body,
-     * only if it was not a HEAD request.
-     *
      * @throws Exception any exception that might occur.
      */
-    public void send() throws Exception {
-        setHeader(HttpResponseHeader.Date, df.format(new Date()));
-        setHeader(HttpResponseHeader.Server, HttpServer.SERVER_NAME);
-
-        writeStatusLine();
-        writeHeaders();
-        if (!wasHeadRequest) {
-            writeBody();
-        }
+    public void writeHeader(HttpResponseHeader header, String value) throws Exception {
+        headers.put(header, value);
+        String headerStr = String.format("%s: %s%s",
+                header.getName(), value, HttpServer.CRLF);
+        writer.writeBytes(headerStr);
         writer.flush();
     }
 
     /**
-     * Sends the status line to the client's {@link java.net.Socket}.
-     * Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF.
+     * Writes the Last-Modified header using the RFC 1123 format.
      *
+     * @param date the last modified {@link Date}.
      * @throws Exception any exception that might occur.
      */
-    private void writeStatusLine() throws Exception {
-        // Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
-        writer.writeBytes(String.format("%s%s%s%s%s%s",
-                HttpServer.HTTP_VERSION,
-                HttpServer.SP,
-                statusCode.getStatusCode(),
-                HttpServer.SP,
-                statusCode.getReasonPhrase(),
-                HttpServer.CRLF));
+    public void writeLastModified(Date date) throws Exception {
+        writeHeader(HttpResponseHeader.LastModified, df.format(date));
     }
 
     /**
-     * Sends all the HTTP headers to the client's {@link java.net.Socket}.
+     * Writes the final {@link HttpResponseHeader}s, ending the headers section.
      *
      * @throws Exception any exception that might occur.
      */
-    private void writeHeaders() throws Exception {
-        for (Entry<HttpResponseHeader, String> header : headers.entrySet()) {
-            String headerStr = String.format("%s: %s%s",
-                    header.getKey().getName(),
-                    header.getValue(), HttpServer.CRLF);
-            writer.writeBytes(headerStr);
-        }
-        // line separating headers
+    public void writeFinalHeaders() throws Exception {
+        writeHeader(HttpResponseHeader.Date, df.format(new Date()));
+        writeHeader(HttpResponseHeader.Server, HttpServer.SERVER_NAME);
         writer.writeBytes(HttpServer.CRLF);
+        writer.flush();
     }
 
     /**
-     * Sends the HTTP response body to the client's {@link java.net.Socket}.
+     * Writes the body data from a {@link String}.
      *
+     * @param body the body data in {@link String}.
      * @throws Exception any exception that might occur.
      */
-    private void writeBody() throws Exception {
-        if (body != null) {
-            writer.write(body);
-        }
+    public void writeBody(String body) throws IOException {
+        writer.writeBytes(body);
+        writer.flush();
+    }
+
+    /**
+     * Writes the body data from a {@link Byte} array,
+     * given a specific offset and length
+     *
+     * @param buffer the data.
+     * @param offset the starting data offset.
+     * @param length the length of bytes to write.
+     * @throws IOException any exception that might occur.
+     */
+    public void writeBody(byte[] buffer, int offset, int length) throws IOException {
+        writer.write(buffer, offset, length);
+        writer.flush();
     }
 }
